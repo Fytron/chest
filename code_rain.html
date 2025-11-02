@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+  <body style="margin: 0 0 0 0; overflow: hidden">
+    <canvas id="matrix"></canvas>
+    <script>
+      const canvas = document.getElementById("matrix");
+      const ctx = canvas.getContext("2d");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const letters =
+        "アイウエオカキクケコサシスセソタチツテトナニヌネノ" +
+        "ハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン" +
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+        "abcdefghijklmnopqrstuvwxyz" +
+        "0123456789" +
+        "αβγδεζηθικλμνξοπρστυφχψω" +
+        "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
+
+      const fontSize = 24;
+      let columns = Math.floor(canvas.width / fontSize);
+      const trailLength = 25;
+
+      let drops = Array(columns).fill(0);
+      let speeds = Array.from(
+        { length: columns },
+        () => Math.random() * 0.05 + 0.02
+      );
+      let timers = Array(columns).fill(0);
+      let trails = Array.from({ length: columns }, () => []);
+
+      function draw(delta) {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.font = fontSize + "px monospace";
+
+        drops.forEach((y, i) => {
+          timers[i] += delta;
+          if (timers[i] >= speeds[i]) {
+            timers[i] = 0;
+
+            const newChar = letters.charAt(
+              Math.floor(Math.random() * letters.length)
+            );
+            trails[i].unshift({ text: newChar, y });
+            if (trails[i].length > trailLength) trails[i].pop();
+            drops[i]++;
+
+            if (y * fontSize > canvas.height && Math.random() > 0.975) {
+              drops[i] = 0;
+              trails[i] = [];
+              speeds[i] = Math.random() * 0.05 + 0.02;
+            }
+          }
+
+          trails[i].forEach((item, index) => {
+            const fade = 1 - index / trailLength;
+            const brightness = Math.pow(fade, 1.5);
+
+            // SLOW morph: only top 2 symbols flicker fast, rest rarely
+            let morphChance;
+            if (index === 0) morphChance = 0.3; // leader changes frequently
+            else if (index === 1) morphChance = 0.1; // near-head flicker
+            else morphChance = 0.005; // slow morph for tail
+
+            if (Math.random() < morphChance) {
+              item.text = letters.charAt(
+                Math.floor(Math.random() * letters.length)
+              );
+            }
+
+            // Color assignment
+            let color;
+            if (index === 0) color = `rgba(255, 255, 255, 0.9)`; // leader
+            else if (index < 4)
+              color = `rgba(180, 255, 180, ${brightness})`; // head glow
+            else color = `rgba(0, 255, 0, ${brightness})`; // trail
+
+            // Glow
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 8 * brightness;
+            ctx.fillStyle = color;
+            ctx.fillText(item.text, i * fontSize, item.y * fontSize);
+
+            // Crisp overlay
+            ctx.shadowBlur = 0;
+            ctx.fillText(item.text, i * fontSize, item.y * fontSize);
+          });
+        });
+      }
+
+      let last = 0;
+      function loop(time) {
+        const delta = (time - last) / 1000;
+        last = time;
+        draw(delta);
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+
+      window.addEventListener("resize", () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        columns = Math.floor(canvas.width / fontSize);
+        drops = Array(columns).fill(0);
+        speeds = Array.from(
+          { length: columns },
+          () => Math.random() * 0.05 + 0.02
+        );
+        timers = Array(columns).fill(0);
+        trails = Array.from({ length: columns }, () => []);
+      });
+    </script>
+  </body>
+</html>
